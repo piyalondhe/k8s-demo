@@ -1,0 +1,72 @@
+---
+- name: Configure Nginx Ingress with TLS Termination
+  hosts: webserver
+  become: true
+
+  tasks:
+    - name: Install Nginx Ingress Controller
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-ingress-controller
+            namespace: ingress-nginx-test
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: nginx-ingress
+            template:
+              metadata:
+                labels:
+                  app: nginx-ingress
+              spec:
+                containers:
+                  - name: nginx-ingress-controller
+                    image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:latest
+                    args:
+                      - /nginx-ingress-controller
+                      - --default-backend-service=ingress-nginx/default-http-backend
+                      - --publish-service=ingress-nginx/ingress-nginx-controller
+          wait: yes
+
+    - name: Create Namespace for Ingress Controller
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ingress-nginx-test
+
+    - name: Create Default Backend Service
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: default-http-backend
+            namespace: ingress-nginx-test
+          spec:
+            selector:
+              app: default-http-backend
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 8080
+          wait: yes
+
+    - name: Generate Self-Signed TLS Certificate
+      command: "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt -subj '/CN=localhost'"
+      notify: Reload Nginx
+
+    - name: Copy TLS Certificate to Nginx Ingress Controller
+      copy:
+        src: /etc/nginx/ssl/
+        dest: /etc/nginx/ssl/
+        remote_src: yes
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      command: "kubectl exec -n ingress-nginx -c nginx-ingress-controller -- /nginx-ingress-controller --reload"

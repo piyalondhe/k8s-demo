@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vote-ingress
+  namespace: vote
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: vote.30df4151-3aa7-4a03-96ec-545cdd1f040e.k8s.civo.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vote
+            port:
+              number: 5000
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: result-ingress
+  namespace: vote
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+  - host: result.30df4151-3aa7-4a03-96ec-545cdd1f040e.k8s.civo.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: result
+            port:
+              number: 5001

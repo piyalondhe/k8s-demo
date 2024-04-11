@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+metadata:
+  name: vote
+spec:
+  destination:
+    namespace: vote
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: k8s-specifications
+    repoURL: 'https://github.com/dockersamples/example-voting-app'
+    targetRevision: HEAD
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
